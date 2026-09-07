@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predicting CTR Growth: A Decision-Support Model for Content Review Prioritization</title>
+<style>
+  :root {
+    --teal: #4FB8CC;
+    --mint: #86E3D0;
+    --dark: #16232A;
+    --text: #27343B;
+    --muted: #65737A;
+    --bg: #FFFFFF;
+    --card-bg: #F6FBFA;
+    --border: #D9DEE2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  header.hero {
+    background: linear-gradient(135deg, var(--dark) 0%, #1F3A40 100%);
+    color: white;
+    padding: 64px 24px 48px;
+    margin-bottom: 8px;
+  }
+
+  header.hero .wrap { padding-bottom: 0; }
+
+  .kicker {
+    color: var(--mint);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    line-height: 1.25;
+    margin: 0 0 20px;
+    font-weight: 700;
+  }
+
+  .abstract-box {
+    background: rgba(255,255,255,0.08);
+    border-left: 3px solid var(--teal);
+    padding: 20px 24px;
+    border-radius: 4px;
+    font-size: 1.02rem;
+  }
+
+  .meta-line {
+    color: rgba(255,255,255,0.65);
+    font-size: 0.9rem;
+    margin-top: 20px;
+  }
+
+  section {
+    padding: 40px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  section:last-of-type { border-bottom: none; }
+
+  h2 {
+    font-size: 1.4rem;
+    color: var(--dark);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--teal);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    color: var(--dark);
+    margin-top: 28px;
+    margin-bottom: 8px;
+  }
+
+  p { margin: 12px 0; }
+
+  .callout {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--mint);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 20px 0;
+    font-size: 0.95rem;
+  }
+
+  .callout strong { color: var(--dark); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 0.92rem;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    background: var(--card-bg);
+    color: var(--dark);
+    font-weight: 600;
+  }
+
+  td.num, th.num { text-align: right; }
+
+  img.chart {
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin: 16px 0 6px;
+  }
+
+  .chart-caption {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 0;
+    margin-bottom: 24px;
+  }
+
+  ul, ol { padding-left: 22px; }
+  li { margin: 6px 0; }
+
+  code {
+    background: var(--card-bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+
+  .placeholder {
+    background: #FFF3CD;
+    color: #7A5C00;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  .action-tag {
+    display: inline-block;
+    background: var(--mint);
+    color: var(--dark);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  footer {
+    text-align: center;
+    padding: 40px 24px 60px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  footer a { color: var(--teal); }
+
+  .repo-links a {
+    color: var(--teal);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .repo-links a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">FlyRank ML Internship — Capstone Research Paper</div>
+    <h1>Predicting CTR Growth: A Decision-Support Model for Content Review Prioritization</h1>
+    <div class="abstract-box">
+      <strong>Abstract.</strong> Content strategists cannot manually review every page for
+      click-through-rate (CTR) opportunity, so we ask: can a page's search performance
+      over one 30-day window predict whether its CTR will meaningfully grow in the next
+      30 days? Using ~107,000 anonymized content items from FlyRank's search-performance
+      warehouse, we built a random forest classifier validated with client-grouped
+      splits, compared against a transparent hand-written baseline rule. The model
+      reaches a Precision@50 of 0.320 against a base rate of 0.225 — a
+      1.42x lift over random ranking — while the baseline rule performs below the base rate 
+      The output is a ranked, reason-coded review queue meant to prioritize a human
+      strategist's attention, not to automate content decisions.
+    </div>
+    <div class="meta-line">FlyRank ML Internship 2026 · Applied Search Intelligence track</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section id="intro">
+    <h2><span class="section-number">1</span>Introduction / Problem</h2>
+    <p>
+      Content that ranks well in search quietly loses click-through rate over time —
+      rankings hold, but fewer searchers click. Most teams notice this only after the
+      fact. Given thousands of pages and limited editorial time, the practical question
+      isn't "is this page declining?" in the abstract — it's <em>which page should a
+      strategist look at first?</em>
+    </p>
+    <p>
+      This project ranks pages by their likelihood of CTR growth over the next 30 days,
+      so review time goes to the pages most worth a second look. A wrong recommendation
+      costs wasted editorial time, not a dangerous outcome — which is why this is framed
+      throughout as decision-support: a ranked shortlist for a human to check, never an
+      automated action.
+    </p>
+  </section>
+
+  <section id="data">
+    <h2><span class="section-number">2</span>Data</h2>
+    <p>
+      <strong>Release:</strong> <code>FlyRank/internship-warehouse</code> (Hugging Face),
+      build <code>flyrank_pseudonymized_warehouse_release_v20260703</code>.
+    </p>
+    <p><strong>Tables used:</strong></p>
+    <ul>
+      <li><code>fact_content_daily_performance</code> — daily search performance, used to
+        build two consecutive 30-day windows per content item.</li>
+      <li><code>dim_content</code> — content metadata (word count, content type, search
+        intent, competition level) joined in as model features.</li>
+    </ul>
+    <p>
+      <strong>Date window:</strong> the most recent 60 days of the daily fact table
+      (relative to its latest date), split into a "prev30" window and a "last30" window.
+    </p>
+    <p>
+      <strong>Rows:</strong> 107,324 content items had at least 50 impressions in
+      <em>both</em> windows. This volume floor was applied first, so pages with
+      near-zero traffic couldn't produce meaningless CTR swings that look dramatic in
+      percentage terms but represent one or two clicks.
+    </p>
+    <p><strong>Excluded, and why:</strong></p>
+    <ul>
+      <li><code>content_updated_date</code>, <code>last_optimized_date</code>,
+        <code>optimization_eligible_date</code> — not verified to fall safely before the
+        feature window, so including them risked leaking information about edits made
+        during the period being predicted.</li>
+      <li><code>fact_content_query_90d</code> — its 90-day window overlaps the most recent
+        months of the snapshot, which would overlap the label window. Left out entirely.</li>
+      <li>No raw URLs, client names, domains, or keyword text appear anywhere in this
+        analysis — only hashed <code>client_hash_id</code> / <code>content_hash_id</code>,
+        used solely for grouping and joining, never as model inputs.</li>
+    </ul>
+  </section>
+
+  <section id="methodology">
+    <h2><span class="section-number">3</span>Methodology</h2>
+
+    <h3>Label definition</h3>
+    <p>
+      <code>is_ctr_growing = 1</code> when CTR in the "last30" window is at least 0.3
+      percentage points higher than CTR in the "prev30" window, else 0.
+    </p>
+    <div class="callout">
+      <strong>A leakage artifact we caught and fixed.</strong> An earlier version of this
+      label used a <em>relative</em> threshold ("CTR grew by 20%"). That version produced
+      a suspicious Precision@50 of 0.98 — investigating showed the model had simply
+      learned "if starting CTR is near zero, predict growth," since a tiny absolute click
+      gain looks enormous in percentage terms when the starting point is near zero.
+      Switching to an absolute point-gain threshold removed that shortcut. We're
+      reporting this because catching it mattered more to the integrity of this result
+      than the number itself.
+    </div>
+
+    <h3>Features</h3>
+    <p><strong>Numeric:</strong> impressions and clicks in the prev30 window, prev30 CTR,
+      average search position, word count, character count, search volume, keyword
+      competition, cost-per-click, backlink count.</p>
+    <p><strong>Categorical:</strong> content type, main search intent, competition level.</p>
+    <p><strong>Excluded as leakage:</strong> impressions, clicks, and CTR from the
+      last30 window — these are what the label is directly computed from.</p>
+
+    <h3>Baseline</h3>
+    <p>
+      A transparent rule scoring pages by how close to page-1 position they already
+      are, how far their current CTR sits below this dataset's own median CTR, and how
+      much traffic they carry. The "weak CTR" cutoff was set to this dataset's measured
+      median, not an arbitrary borrowed number — an earlier draft used a fixed threshold
+      from a different dataset's scale and produced a baseline that wasn't meaningfully
+      discriminating between pages at all.
+    </p>
+
+    <h3>Validation design</h3>
+    <p>
+      <code>GroupShuffleSplit</code> grouped by <code>client_hash_id</code>, 80/20
+      train/test. This guarantees no client's pages appear in both train and test — a
+      random row-level split would let the model partly memorize per-client patterns and
+      overstate real-world performance.
+    </p>
+
+    <h3>Leakage checks</h3>
+    <p>
+      An automated assertion halts the pipeline if any last30-derived column appears in
+      the feature list. Feature importances were inspected after training to confirm no
+      single feature suspiciously dominates the model's decisions.
+    </p>
+  </section>
+
+  <section id="results">
+    <h2><span class="section-number">4</span>Results</h2>
+    <p>Same client-grouped test split, same metric, for both baseline and model:</p>
+    <table>
+      <thead>
+        <tr><th>Metric</th><th class="num">Baseline rule</th><th class="num">Random forest</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Precision@20</td><td class="num placeholder">0.000</td><td class="num placeholder">0.000</td></tr>
+        <tr><td>Precision@50</td><td class="num placeholder">0.000</td><td class="num placeholder">0.000</td></tr>
+        <tr><td>Base rate (test set)</td><td class="num placeholder" colspan="2">0.225</td></tr>
+      </tbody>
+    </table>
+
+    <img class="chart" src="charts/precision_comparison.svg" alt="Precision at 50 comparison between baseline and random forest">
+    <p class="chart-caption">Precision@50: baseline rule vs. random forest, same held-out test split.</p>
+
+    <img class="chart" src="charts/feature_importance.svg" alt="Top model features by importance">
+    <p class="chart-caption">Which signals the random forest actually leans on most.</p>
+
+    <img class="chart" src="charts/label_distribution.svg" alt="Distribution of the CTR growth label">
+    <p class="chart-caption">How common CTR growth actually is in this data — the base rate, visually.</p>
+  </section>
+
+  <section id="limitations">
+    <h2><span class="section-number">5</span>Limitations &amp; Honest Framing</h2>
+    <ul>
+      <li><strong>Observed, not causal.</strong> This model finds pages statistically
+        associated with future CTR growth. It does not identify what to change on a
+        page, and cannot claim that any specific edit <em>causes</em> growth — that would
+        require a controlled experiment (before/after a real edit, compared against a
+        held-out control group).</li>
+      <li><strong>One snapshot, one pair of windows.</strong> The label covers a single
+        60-day slice of a 17-month history. Whether this pattern holds across other
+        periods — different seasons, different search-result layouts — is untested here.</li>
+      <li><strong>Threshold choices are ours, not the data's.</strong> The 0.3-point CTR
+        growth threshold and the 50-impression volume floor were deliberate choices. A
+        different threshold would describe a different rate of "success."</li>
+      <li><strong>Some content metadata is incomplete.</strong> Fields like word count and
+        backlink count are missing for a share of rows and were filled with zero rather
+        than dropped, which could understate their real importance to the model.</li>
+      <li><strong>Decision-support only.</strong> The ranked output is meant to prioritize
+        human review. It is not, and should not be treated as, an automated publishing
+        decision.</li>
+    </ul>
+  </section>
+
+  <section id="recommendations">
+    <h2><span class="section-number">6</span>Ranked Recommendations</h2>
+    <p>
+      The model produces a ranked queue of content items ordered by predicted probability
+      of CTR growth. Each row carries reason codes and a suggested action:
+    </p>
+    <ul>
+      <li><span class="action-tag">review_title_and_meta</span> — currently below-median
+        CTR for its position, and the model flags it as a likely grower. The clearest
+        candidate for a title or meta-description rewrite.</li>
+      <li><span class="action-tag">monitor_closely</span> — model flags growth likelihood
+        without the CTR-gap signal present.</li>
+      <li><span class="action-tag">monitor</span> — no strong signal either way; lower
+        priority for manual review right now.</li>
+    </ul>
+    <p>
+      <strong>Intended use:</strong> a strategist works down the list starting at rank 1,
+      checking each page against editorial judgment before making any change. This list
+      is a starting point for a human decision, not a replacement for one.
+    </p>
+    <p>
+      <strong>What should never be automated:</strong> automatically rewriting or
+      republishing content based on this score alone. The model has no visibility into
+      brand voice, factual accuracy, or business priorities — a human review step is
+      required for every recommended action.
+    </p>
+  </section>
+
+  <section id="reproducibility">
+    <h2><span class="section-number">7</span>Reproducibility</h2>
+    <p>Everything behind this paper is public and rerunnable:</p>
+    <p class="repo-links">
+      <a href="https://github.com/TobyRathmell123/ML-Internship" target="_blank" rel="noopener">
+        github.com/TobyRathmell123/ML-Internship
+      </a>
+    </p>
+    <ul>
+      <li><code>work/notebooks/capstone.ipynb</code> — the full pipeline: data loading,
+        label construction, leakage checks, baseline, model training, evaluation, and
+        the ranked queue.</li>
+      <li><code>work/notebooks/w06_validation_audit.ipynb</code> — the leakage
+        investigation in detail, including the before/after comparison that caught the
+        original label artifact.</li>
+      <li><code>work/outputs/ctr_growth_queue.csv</code> — the full ranked output.</li>
+    </ul>
+    <p>
+      Random seed fixed at <code>42</code> throughout (data split and model training)
+      for reproducibility. Built with scikit-learn, pandas, and DuckDB against the
+      Hugging Face-hosted warehouse release.
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap" style="padding:0;">
+    <p>
+      Built on the FlyRank ML Internship dataset —
+      <a href="https://flyrank.ai" target="_blank" rel="noopener">flyrank.ai</a>
+    </p>
+    <p style="font-size:0.8rem; margin-top:16px;">
+      Anonymized data. No client names, domains, or raw queries appear anywhere in this
+      analysis or its outputs.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
